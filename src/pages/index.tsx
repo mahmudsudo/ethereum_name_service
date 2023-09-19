@@ -12,7 +12,6 @@ import {
 } from 'wagmi'
 import MainButton from '../components/connect-button'
 import abi from '../utils/abi.json'
-import { Nft, TokenId } from '../utils/types'
 import toast, { Toaster } from 'react-hot-toast'
 import Gallery from '../components/nft-grid'
 import useWindowSize from 'react-use/lib/useWindowSize'
@@ -29,8 +28,6 @@ const Home: NextPage = () => {
   })
 
   const [name, setName] = useState('')
-  const [tokenId, setTokenId] = useState<TokenId>(null)
-  const [lilnouns, setLilnouns] = useState<Nft[]>()
   const [openDialog, setOpenDialog] = useState<boolean>(false)
   const [isRegistered, setIsRegistered] = useState<boolean>(false)
 
@@ -41,25 +38,7 @@ const Home: NextPage = () => {
     setMounted(true)
   }, [])
 
-  // Get owned lilnouns
-  useEffect(() => {
-    const fetchNfts = async () => {
-      const opensea = await fetch(`
-        https://api.opensea.io/api/v1/assets?owner=${address}&collection=lil-nouns&limit=50
-      `)
-      const nfts = await opensea.json()
-      setLilnouns(
-        nfts.assets.map((nft: any) => {
-          return {
-            name: nft.name,
-            tokenId: nft.token_id,
-            image: nft.image_url,
-          }
-        })
-      )
-    }
-    if (address) fetchNfts()
-  }, [address])
+  
 
   const handleFormSubmit = (e: any) => {
     e.preventDefault()
@@ -81,38 +60,27 @@ const Home: NextPage = () => {
       return
     }
 
-    if (lilnouns && lilnouns?.length === 1) {
-      claim.write?.()
-    } else {
-      setOpenDialog(true)
-    }
+   
   }
 
-  // Set tokenId of owned lilnoun if the connected wallet owns just 1
-  useEffect(() => {
-    if (lilnouns && lilnouns.length > 0) {
-      setTokenId(lilnouns[0].tokenId)
-    }
-  }, [lilnouns])
-
   const claim = useContractWrite({
-    addressOrName: '0x27c4f6ff6935537c9cc05f4eb40e666d8f328918',
+    addressOrName: "0x502441D44d38C32C4eF054720d052f196b3Bf9DA",
     contractInterface: abi,
-    functionName: 'claimSubdomain',
-    chainId: 1,
-    args: [name, tokenId],
+    functionName: 'setDomain',
+    chainId: 1, // mainnet
+    args: [name],
     mode: 'recklesslyUnprepared',
-    onError: (error) => {
+    onError: (error: { message: string }) => {
       const errMsg: string = error.message
 
       if (errMsg.includes('Not authorised')) {
         toast.error("You don't own a Lil Noun")
       } else if (errMsg.includes('sub-domain already exists')) {
-        toast.error(`${name}.lilnouns.eth already exists`)
+        toast.error(`${name}.test.eth already exists`)
       } else if (errMsg.includes('user rejected transaction')) {
         toast.error('Transaction rejected')
       } else if (errMsg.includes('Token has already been set')) {
-        const hasMultipleNouns = lilnouns && lilnouns.length > 1
+        const hasMultipleNouns = test && test.length > 1
 
         toast.error(
           `A name has already been claimed with ${
@@ -138,7 +106,7 @@ const Home: NextPage = () => {
   const waitForClaim = useWaitForTransaction({
     chainId: 1,
     hash: claim?.data?.hash,
-    onSuccess: (res) => {
+    onSuccess: (res: { status: number }) => {
       const didFail = res.status === 0
       if (didFail) {
         toast.error('Registration failed')
@@ -154,17 +122,14 @@ const Home: NextPage = () => {
   return (
     <>
       <Head>
-        <title>lilnouns.eth</title>
-        <meta property="og:title" content="lilnouns.eth" />
-        <meta name="description" content="Claim your lilnouns.eth subdomain" />
+        <title>test.eth</title>
+        <meta property="og:title" content="test.eth" />
+        <meta name="description" content="Claim your test.eth subdomain" />
         <meta
           property="og:description"
-          content="Claim your lilnouns.eth subdomain"
+          content="Claim your test.eth subdomain"
         />
-        <meta property="og:image" content="https://lil.domains/sharing.jpg" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@lilnounsdao" />
-        <meta name="twitter:creator" content="@gregskril" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
       {mounted && address && (
@@ -196,43 +161,38 @@ const Home: NextPage = () => {
       <main className="wrapper">
         <div className="container">
           <Heading className="title" level="1" align="center">
-            lilnouns.eth subdomain claim
+            test.eth subdomain claim
           </Heading>
-          <form className="claim" onSubmit={(e) => handleFormSubmit(e)}>
+          <form className="claim" onSubmit={(e: any) => handleFormSubmit(e)}>
             <Input
               label=""
               name="name"
-              placeholder="greg"
+              placeholder="test"
               disabled={claim.data ? true : false}
               maxLength={42}
               spellCheck={false}
               autoCapitalize="none"
-              suffix=".lilnouns.eth"
+              suffix=".test.eth"
               size="large"
-              onChange={(e) => {
+              onChange={(e: { target: { value: any } }) => {
                 setName(e.target.value)
               }}
             />
-            <MainButton
-              disabled={!tokenId}
-              isLoading={claim.data && !isRegistered}
-              txHash={claim.data?.hash}
-              claimText="You don't have a Lil Noun :/"
-            />
+  
           </form>
         </div>
       </main>
 
       <footer className="footer">
         <a
-          href="https://twitter.com/gregskril"
+          href="https://twitter.com/bellomahmud6"
           target="_blank"
           rel="noreferrer"
         >
           @gregskril
         </a>
         <a
-          href="https://github.com/gskril/lilnouns.eth"
+          href="https://github.com/mahmudsudo"
           target="_blank"
           rel="noreferrer"
         >
@@ -240,31 +200,7 @@ const Home: NextPage = () => {
         </a>
       </footer>
 
-      <div className="modal">
-        <Dialog
-          open={openDialog}
-          title="Which Lil Noun do you want to use?"
-          variant="closable"
-          onDismiss={() => {
-            if (isRegistered) {
-              // Refresh the page on dialog exit after a registration to fully reset state
-              window.location.reload()
-            } else if (claim.data) {
-              // If a claim has already started, don't exit the modal
-              return toast.error(
-                "You can't close the dialog during registration",
-                {
-                  style: {
-                    maxWidth: '100%',
-                  },
-                }
-              )
-            } else {
-              setOpenDialog(false)
-            }
-          }}
-        >
-          <Gallery nfts={lilnouns} tokenId={tokenId} setTokenId={setTokenId} />
+      
           <MainButton
             isLoading={claim.data && !isRegistered}
             txHash={claim.data?.hash}
